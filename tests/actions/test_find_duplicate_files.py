@@ -1,28 +1,54 @@
-from pro_filer.actions.main_actions import find_duplicate_files  # NOQA
+from pro_filer.actions.main_actions import find_duplicate_files
 import pytest
 
+@pytest.fixture
+def create_temp_files(tmp_path):
+    file1_content = b"Content of file 1"
+    file2_content = b"Content of file 2"
 
-def test_find_duplicate_files(tmp_path):
-    files = []
-    file_1 = tmp_path / "file_test1.txt"
-    with open(file_1, "w") as f:
-        f.write("Edgar Web Developer")
+    file1 = tmp_path / "file1.txt"
+    file2 = tmp_path / "file2.txt"
 
-    file_2 = tmp_path / "file_test2.txt"
-    with open(file_2, "w") as f:
-        f.write("Primeiro Sim")
+    with open(file1, "wb") as f1, open(file2, "wb") as f2:
+        f1.write(file1_content)
+        f2.write(file2_content)
 
-    file_2_2 = tmp_path / "file_test2_2.txt"
-    with open(file_2_2, "w") as f:
-        f.write("Primeiro sim Internacional")
+    return str(file1), str(file2)
 
-    files.append(str(file_1))
-    files.append(str(file_2))
-    files.append(str(file_2_2))
-    to_check = find_duplicate_files({"all_files": files})
-    assert len(to_check) == 1
-    assert len(to_check[0]) == 2
+def test_find_duplicate_files_different_content(tmp_path):
+    file1 = tmp_path / "file1.txt"
+    file2 = tmp_path / "file2.txt"
 
-    files.append("inexistent_file.txt")
-    with pytest.raises(ValueError, match="All files must exist"):
-        to_check = find_duplicate_files({"all_files": files})
+    with open(file1, "w") as f1, open(file2, "w") as f2:
+        f1.write("Content of file 1")
+        f2.write("Different content for file 2")
+
+    context = {"all_files": [str(file1), str(file2)]}
+
+    assert find_duplicate_files(context) == []
+
+def test_find_duplicate_files_same_content(tmp_path):
+    file1 = tmp_path / "file1.txt"
+    file2 = tmp_path / "file2.txt"
+
+    content = "Same content for both files"
+
+    with open(file1, "w") as f1, open(file2, "w") as f2:
+        f1.write(content)
+        f2.write(content)
+
+    context = {"all_files": [str(file1), str(file2)]}
+
+    assert find_duplicate_files(context) == [(str(file1), str(file2))]
+
+def test_find_duplicate_files_missing_file(tmp_path):
+    file1 = tmp_path / "file1.txt"
+    file2 = tmp_path / "file2.txt"
+
+    with open(file1, "w") as f1:
+        f1.write("Content of file 1")
+
+    context = {"all_files": [str(file1), str(file2)]}
+
+    with pytest.raises(ValueError):
+        find_duplicate_files(context)
