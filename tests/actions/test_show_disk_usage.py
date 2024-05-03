@@ -1,36 +1,27 @@
-import os
-import pytest
-from pro_filer.actions.main_actions import show_disk_usage
+from pro_filer.actions.main_actions import show_disk_usage  # NOQA
+from pro_filer.cli_helpers import _get_printable_file_path
 
-@pytest.fixture
-def tmp_files(tmp_path):
-    # Criando arquivos temporários
-    file1 = tmp_path / "file1.txt"
-    file2 = tmp_path / "file2.txt"
-    file3 = tmp_path / "file3.txt"
 
-    # Escrevendo dados nos arquivos
-    file1.write_text("Hello")
-    file2.write_text("World")
-    file3.write_text("!")
+def test_show_disk_usage(tmp_path, capsys):
+    file_1 = tmp_path / "file_test1.txt"
+    with open(file_1, "w") as f:
+        f.write("GABIGOL VOLTOU")
+    print_1 = f"'{_get_printable_file_path(str(file_1))}':".ljust(70)
 
-    return [str(file1), str(file2), str(file3)]
+    file_2 = tmp_path / "file_test2.txt"
+    with open(file_2, "w") as f:
+        f.write("MAS AINDA NÃO FEZ GOL")
+    print_2 = f"'{_get_printable_file_path(str(file_2))}':".ljust(70)
 
-def test_show_disk_usage(tmp_files, capfd):
-    context = {
-        "all_files": tmp_files
-    }
+    context = {"all_files": [str(file_1), str(file_2)]}
     show_disk_usage(context)
-    out, _ = capfd.readouterr()
-    lines = out.strip().split("\n")
-    
-    assert len(lines) == 4  # Verifica se há 4 linhas (uma para cada arquivo e uma para o total size)
-    assert "Total size:" in lines[-1]  # Verifica se a última linha começa com "Total size:"
-    
-    # Verifica se cada linha (exceto a última) possui a formatação correta
-    for line in lines[:-1]:
-        assert line.endswith("%)")  # Verifica se a linha termina com a porcentagem
-        assert "(100%)" in line or "(0%)" in line  # Verifica se há "(100%)" ou "(0%)"
+    captured = capsys.readouterr()
+    expected_out = (
+        f"{print_2} 22 (61%)\n{print_1} 14 (38%)\nTotal size: 36\n"
+    )
+    assert captured.out == expected_out
 
-if __name__ == "__main__":
-    pytest.main()
+    context_2 = {"all_files": []}
+    show_disk_usage(context_2)
+    captured_2 = capsys.readouterr()
+    assert captured_2.out == "Total size: 0\n"

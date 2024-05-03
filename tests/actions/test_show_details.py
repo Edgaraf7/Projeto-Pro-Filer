@@ -3,8 +3,11 @@ import os
 from datetime import date
 
 
-def test_show_details(dir, capsys):
-    context = {"base_path": dir}
+def test_show_details(tmp_path, capsys):
+    file_path = tmp_path / "file.txt"
+    with open(file_path, "w") as file:
+        file.write("GABIGOL VAI CRAVAR HOJE")
+    context = {"base_path": str(file_path)}
     show_details(context)
     captured = capsys.readouterr()
     expected_output = (
@@ -12,15 +15,18 @@ def test_show_details(dir, capsys):
         f"File size in bytes: 23\n"
         f"File type: file\n"
         f"File extension: .txt\n"
-        f"Last modified date: {date.fromtimestamp(os.path.getmtime(dir))}\n"
+        f"""Last modified date: {
+            date.fromtimestamp(os.path.getmtime(str(file_path)))
+            }\n"""
     )
     assert captured.out.strip() == expected_output.strip()
 
 
 def test_show_details_without_extension(tmp_path, capsys):
-    file = tmp_path / "without_extension"
-    file.write_text("GABIGOL SE LESIONOU")
-    context = {"base_path": str(file)}
+    file_path = tmp_path / "without_extension"
+    with open(file_path, "w") as file:
+        file.write("GABIGOL SE LESIONOU")
+    context = {"base_path": str(file_path)}
     show_details(context)
     captured = capsys.readouterr()
     expected_output = (
@@ -29,7 +35,7 @@ def test_show_details_without_extension(tmp_path, capsys):
         f"File type: file\n"
         f"File extension: [no extension]\n"
         f"""Last modified date: {
-            date.fromtimestamp(os.path.getmtime(str(file)))
+            date.fromtimestamp(os.path.getmtime(str(file_path)))
             }\n"""
     )
     assert captured.out.strip() == expected_output.strip()
