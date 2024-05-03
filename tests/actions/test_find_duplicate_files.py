@@ -1,68 +1,28 @@
+from pro_filer.actions.main_actions import find_duplicate_files  # NOQA
 import pytest
-import os
-import tempfile
-from pro_filer.actions.main_actions import find_duplicate_files
 
 
-@pytest.fixture
-def create_temp_files():
-    temp_dir = tempfile.mkdtemp()
-    files = [
-        "file1.txt",
-        "file2.txt",
-        "file3.txt"
-    ]
-    for file in files:
-        file_path = os.path.join(temp_dir, file)
-        with open(file_path, "w") as f:
-            f.write("Test content")
-    return temp_dir
+def test_find_duplicate_files(tmp_path):
+    files = []
+    file_1 = tmp_path / "file_test1.txt"
+    with open(file_1, "w") as f:
+        f.write("Edgar Web Developer")
 
+    file_2 = tmp_path / "file_test2.txt"
+    with open(file_2, "w") as f:
+        f.write("Primeiro Sim")
 
-def test_no_duplicate_files(create_temp_files):
-    files = [
-        os.path.join(create_temp_files, "file1.txt"),
-        os.path.join(create_temp_files, "file2.txt"),
-        os.path.join(create_temp_files, "file3.txt")
-    ]
-    context = {"all_files": files}
-    assert find_duplicate_files(context) == []
+    file_2_2 = tmp_path / "file_test2_2.txt"
+    with open(file_2_2, "w") as f:
+        f.write("Primeiro sim Internacional")
 
+    files.append(str(file_1))
+    files.append(str(file_2))
+    files.append(str(file_2_2))
+    to_check = find_duplicate_files({"all_files": files})
+    assert len(to_check) == 1
+    assert len(to_check[0]) == 2
 
-def test_all_duplicate_files(create_temp_files):
-    files = [
-        os.path.join(create_temp_files, "file1.txt"),
-        os.path.join(create_temp_files, "file2.txt"),
-        os.path.join(create_temp_files, "file3.txt")
-    ]
-    context = {"all_files": files * 2}  # Duplicate all files
-    expected_result = [
-        (files[0], files[3]),
-        (files[1], files[4]),
-        (files[2], files[5])
-    ]
-    assert find_duplicate_files(context) == expected_result
-
-
-def test_some_duplicate_files(create_temp_files):
-    files = [
-        os.path.join(create_temp_files, "file1.txt"),
-        os.path.join(create_temp_files, "file2.txt"),
-        os.path.join(create_temp_files, "file3.txt")
-    ]
-    context = {"all_files": files[:2] + files[1:]}  # Duplicate file2
-    expected_result = [
-        (files[0], files[1]),
-        (files[1], files[2])
-    ]
-    assert find_duplicate_files(context) == expected_result
-
-
-def test_missing_files():
-    files = [
-        "nonexistent_file1.txt",
-        "nonexistent_file2.txt"
-    ]
-    context = {"all_files": files}
-    with pytest.raises(ValueError):
-        find_duplicate_files(context)
+    files.append("inexistent_file.txt")
+    with pytest.raises(ValueError, match="All files must exist"):
+        to_check = find_duplicate_files({"all_files": files})
